@@ -1,0 +1,24 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "8084:8080"
+    environment:
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_CLIENT_NAME: ${KEYCLOAK_CLIENT_NAME}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+
+    networks:
+      - gateway_net
+      - iw_authenticationservice_keycloak_net
+
+
+networks:
+  gateway_net:
+  iw_authenticationservice_keycloak_net :
+    external: true
+

@@ -25,7 +25,7 @@ spring:
               predicates:
                 - Path=/orders/**
               filters:
-                - RewritePath=/orders/(?<segment>/.*)?, /api/v1/orders${segment}
+                - RewritePath=/orders(?<segment>/.*)?, /api/v1/orders${segment}
             - id: authentication_service_route
               uri: http://localhost:8083
               predicates:
@@ -47,7 +47,7 @@ spring:
             scope: openid, profile, email
       resourceserver:
         jwt:
-          issuer-uri: http://keycloak:8080/realms/iw_payment_app
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
 
 
 server:

@@ -1,0 +1,119 @@
+services:
+  gateway:
+    build:
+      context: ../iw_payment_gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "8084:8080"
+    environment:
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_CLIENT_NAME: ${KEYCLOAK_CLIENT_NAME}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+    depends_on:
+      - userservice
+      - orderservice
+      - authservice
+      - keycloak
+    networks:
+      - gateway_net
+      - iw_authenticationservice_keycloak_net
+
+  authservice:
+    build:
+      context: ../IW_Authentication_Service
+      dockerfile: Dockerfile
+    container_name: authservice
+    environment:
+      USER_SERVICE_URL: http://userservice:8080
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+    depends_on:
+      - userservice
+    networks:
+      - iw_authenticationservice_keycloak_net
+      - gateway_net
+
+  userservice:
+    build:
+      context: ../IW_User_Service
+      dockerfile: Dockerfile
+    container_name: userservice
+    environment:
+      SPRING_APPLICATION_NAME: UserService
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://userservice_db:5432/innowisedb"
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_LIQUIBASE_ENABLED: "true"
+      SPRING_CACHE_TYPE: redis
+      SPRING_DATA_REDIS_HOST: userservice_redis
+      SPRING_DATA_REDIS_PORT: 6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      - userservice_db
+      - userservice_redis
+    networks:
+      - userservice_net
+      - gateway_net
+      -
+  userservice_db:
+    image: postgres:latest
+    container_name: userservice_db
+    environment:
+      POSTGRES_DB: innowisedb
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - userservice_db_data:/var/lib/postgresql/data
+    networks:
+      - userservice_net
+
+  userservice_redis:
+    image: redis:latest
+    container_name: userservice_redis
+    networks:
+      - userservice_net
+
+  orderservice:
+    build:
+      context: ../iw_order_service
+      dockerfile: Dockerfile
+    container_name: orderservice
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://orderservice_db:5432/${POSTGRES_DB_NAME}"
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      USER_SERVICE_URL: http://userservice:8080
+    depends_on:
+      - orderservice_db
+      - userservice
+    networks:
+      - orderservice_net
+      - gateway_net
+
+  orderservice_db:
+    image: postgres:latest
+    container_name: orderservice_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - orderservice_db_data:/var/lib/postgresql/data
+    networks:
+      - orderservice_net
+
+volumes:
+  userservice_db_data:
+  orderservice_db_data:
+
+networks:
+  iw_authenticationservice_keycloak_net:
+    external: true
+  userservice_net:
+  orderservice_net:
+  gateway_net:
