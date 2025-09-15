@@ -5,20 +5,22 @@ services:
       dockerfile: Dockerfile
     container_name: gateway
     ports:
-      - "8084:8080"
+      - "8084:8084"
     environment:
-      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
-      KEYCLOAK_CLIENT_NAME: ${KEYCLOAK_CLIENT_NAME}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_GW_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_GW_CLIENT_SECRET}
+      KEYCLOAK_CLIENT_NAME: ${KEYCLOAK_GW_CLIENT_NAME}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      USER_SERVICE_URL: ${USER_SERVICE_URL}
+      AUTHENTICATION_SERVICE_URL: ${AUTHENTICATION_SERVICE_URL}
+      ORDER_SERVICE_URL: ${ORDER_SERVICE_URL}
     depends_on:
       - userservice
       - orderservice
       - authservice
-      - keycloak
     networks:
       - gateway_net
-      - iw_authenticationservice_keycloak_net
+      - keycloak_net
 
   authservice:
     build:
@@ -26,16 +28,16 @@ services:
       dockerfile: Dockerfile
     container_name: authservice
     environment:
-      USER_SERVICE_URL: http://userservice:8080
-      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      USER_SERVICE_URL: ${USER_SERVICE_URL}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_AS_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_AS_CLIENT_SECRET}
       KEYCLOAK_SERVER_URL: ${KEYCLOAK_SERVER_URL}
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
     depends_on:
       - userservice
     networks:
-      - iw_authenticationservice_keycloak_net
+      - keycloak_net
       - gateway_net
 
   userservice:
@@ -45,9 +47,9 @@ services:
     container_name: userservice
     environment:
       SPRING_APPLICATION_NAME: UserService
-      SPRING_DATASOURCE_URL: "jdbc:postgresql://userservice_db:5432/innowisedb"
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_URL: ${US_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${US_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${US_DB_PASSWORD}
       SPRING_LIQUIBASE_ENABLED: "true"
       SPRING_CACHE_TYPE: redis
       SPRING_DATA_REDIS_HOST: userservice_redis
@@ -59,16 +61,15 @@ services:
     networks:
       - userservice_net
       - gateway_net
-      -
   userservice_db:
     image: postgres:latest
     container_name: userservice_db
     environment:
       POSTGRES_DB: innowisedb
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${US_DB_USERNAME}
+      POSTGRES_PASSWORD: ${US_DB_PASSWORD}
     volumes:
-      - userservice_db_data:/var/lib/postgresql/data
+      - iw_user_service_db_data:/var/lib/postgresql/data
     networks:
       - userservice_net
 
@@ -84,10 +85,10 @@ services:
       dockerfile: Dockerfile
     container_name: orderservice
     environment:
-      SPRING_DATASOURCE_URL: "jdbc:postgresql://orderservice_db:5432/${POSTGRES_DB_NAME}"
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      USER_SERVICE_URL: http://userservice:8080
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://orderservice_db:5432/${OS_DB_NAME}"
+      SPRING_DATASOURCE_USERNAME: ${OS_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${OS_DB_PASSWORD}
+      USERSERVICE_URL: ${USER_SERVICE_URL}
     depends_on:
       - orderservice_db
       - userservice
@@ -99,21 +100,26 @@ services:
     image: postgres:latest
     container_name: orderservice_db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB_NAME}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${OS_DB_NAME}
+      POSTGRES_USER: ${OS_DB_USERNAME}
+      POSTGRES_PASSWORD: ${OS_DB_PASSWORD}
     volumes:
-      - orderservice_db_data:/var/lib/postgresql/data
+      - iw_order_service_db_data:/var/lib/postgresql/data
     networks:
       - orderservice_net
 
 volumes:
-  userservice_db_data:
-  orderservice_db_data:
+  iw_user_service_db_data:
+    name: iw_user_service_db_data
+  iw_order_service_db_data:
+    name: iw_order_service_db_data
 
 networks:
-  iw_authenticationservice_keycloak_net:
+  keycloak_net:
     external: true
   userservice_net:
+    driver: bridge
   orderservice_net:
+    driver: bridge
   gateway_net:
+    driver: bridge

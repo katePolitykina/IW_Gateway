@@ -23,7 +23,7 @@ public class JwtToHeadersFilter implements GlobalFilter, Ordered {
         return ReactiveSecurityContextHolder.getContext()
                 .flatMap(securityContext -> {
                     if (securityContext != null && securityContext.getAuthentication() instanceof JwtAuthenticationToken jwtAuth) {
-                        Jwt jwt = jwtAuth.getToken(); // достаем Jwt
+                        Jwt jwt = jwtAuth.getToken();
                         String userServiceId = jwt.getClaimAsString("userServiceId");
                         List<String> roles = jwt.getClaimAsStringList("roles");
 
@@ -42,8 +42,7 @@ public class JwtToHeadersFilter implements GlobalFilter, Ordered {
                         return chain.filter(mutatedExchange);
                     }
                     return chain.filter(exchange);
-                })
-                .switchIfEmpty(chain.filter(exchange));
+                });
 
     }
 
@@ -52,6 +51,6 @@ public class JwtToHeadersFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -1;
+        return 0;
     }
 }
