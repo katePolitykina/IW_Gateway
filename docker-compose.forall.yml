@@ -1,7 +1,59 @@
 services:
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - iw_kafka_net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - iw_kafka_net
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - iw_kafka_net
+
+  paymentservice:
+    build:
+      context: ../iW_Payment_Service
+      dockerfile: Dockerfile
+    container_name: iw-payment-service
+    depends_on:
+      - mongo
+      - kafka
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - iw_kafka_net
+
   gateway:
     build:
-      context: ../iw_payment_gateway
+      context: ../IW_Gateway
       dockerfile: Dockerfile
     container_name: gateway
     ports:
@@ -92,13 +144,17 @@ services:
     depends_on:
       - orderservice_db
       - userservice
+      - kafka
     networks:
       - orderservice_net
       - gateway_net
+      - iw_kafka_net
 
   orderservice_db:
     image: postgres:latest
     container_name: orderservice_db
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: ${OS_DB_NAME}
       POSTGRES_USER: ${OS_DB_USERNAME}
@@ -108,11 +164,15 @@ services:
     networks:
       - orderservice_net
 
+
+
 volumes:
   iw_user_service_db_data:
     name: iw_user_service_db_data
   iw_order_service_db_data:
     name: iw_order_service_db_data
+  mongo_data:
+    name: iw_payment_service_mongo_data
 
 networks:
   keycloak_net:
@@ -122,4 +182,6 @@ networks:
   orderservice_net:
     driver: bridge
   gateway_net:
+    driver: bridge
+  iw_kafka_net:
     driver: bridge
