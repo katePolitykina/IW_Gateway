@@ -1,50 +1,52 @@
 spring:
   application:
     name: iw_payment_gateway
-
   cloud:
     gateway:
       server:
         webflux:
-          routes:
-            - id: user_service_users_route
-              uri: ${USER_SERVICE_URL}
-              predicates:
-                - Path=/users/**
-                - Method=GET,PUT,PATCH
-              filters:
-                - RewritePath=/users(?<segment>/.*)?,/api/v1.0/users${segment}
-            - id: user_service_cards_route
-              uri: ${USER_SERVICE_URL}
-              predicates:
-                - Path=/cards/**
-              filters:
-                - RewritePath=/cards(?<segment>/.*)?,/api/v1.0/cards${segment}
-            - id: order_service_route
-              uri: ${ORDER_SERVICE_URL}
-              predicates:
-                - Path=/orders/**
-              filters:
-                - RewritePath=/orders(?<segment>/.*)?,/api/v1/orders${segment}
-            - id: authentication_service_route
-              uri: ${AUTHENTICATION_SERVICE_URL}
-              predicates:
-                - Path=/auth/**
-              filters:
-                - RewritePath=/auth(?<segment>/.*)?,/api/v1.0/auth${segment}
+      routes:
+        - id: user_service_users_route
+          uri: ${USER_SERVICE_URL}
+          predicates:
+            - Path=/users/**
+            - Method=GET,PUT,PATCH
+          filters:
+            - RewritePath=/users(?<segment>/.*)?,/api/v1.0/users${segment}
+        - id: user_service_cards_route
+          uri: ${USER_SERVICE_URL}
+          predicates:
+            - Path=/cards/**
+          filters:
+            - RewritePath=/cards(?<segment>/.*)?,/api/v1.0/cards${segment}
+        - id: order_service_orders_route
+          uri: ${ORDER_SERVICE_URL}
+          predicates:
+            - Path=/orders/**
+          filters:
+            - RewritePath=/orders(?<segment>/.*)?,/api/v1/orders${segment}
+        - id: order_service_items_route
+          uri: ${ORDER_SERVICE_URL}
+          predicates:
+            - Path=/items/**
+          filters:
+            - RewritePath=/items(?<segment>/.*)?,/api/v1/items${segment}
+        - id: keycloak_route
+          uri: ${KEYCLOAK_SERVER_URL}
+          predicates:
+            - Path=/keycloak-auth/**
+          filters:
+            - PreserveHostHeader
+        - id: authentication_service_route
+          uri: ${AUTHENTICATION_SERVICE_URL}
+          predicates:
+            - Path=/auth/**
+          filters:
+            - RewritePath=/auth(?<segment>/.*)?,/api/v1.0/auth${segment}
 
 
   security:
     oauth2:
-      client:
-        registration:
-          keycloak:
-            provider: keycloak
-            client-id: ${KEYCLOAK_CLIENT_ID}
-            client-secret: ${KEYCLOAK_CLIENT_SECRET}
-            client-name: ${KEYCLOAK_CLIENT_NAME}
-            authorization-grant-type: authorization_code
-            scope: openid, profile, email
       resourceserver:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI}
@@ -60,5 +62,5 @@ logging:
     org.springframework.security.oauth2: DEBUG
     org.springframework.security.oauth2.client: DEBUG
     org.springframework.security.oauth2.jwt: DEBUG
-    org.springframework.cloud.gateway: DEBUG
-    reactor.netty.http.client: DEBUG
+    org.springframework.cloud.gateway: TRACE
+    reactor.netty.http.client: TRACE
